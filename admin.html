@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upload Material</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h2, h3 {
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    select, input, textarea {
+      width: 100%;
+      max-width: 400px;
+      margin: 5px 0;
+      padding: 8px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    textarea {
+      height: 100px;
+      resize: vertical;
+    }
+    button {
+      display: inline-block;
+      width: 100%;
+      max-width: 200px;
+      margin: 10px 0;
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      text-align: center;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .delete-btn {
+      background-color: #ff4444;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .delete-btn:hover {
+      background-color: #cc0000;
+    }
+
+    /* Mobile Responsive Design */
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      h2, h3 {
+        font-size: 1.2rem;
+      }
+      select, input, textarea {
+        max-width: 100%;
+        font-size: 0.9rem;
+      }
+      button {
+        max-width: 100%;
+        font-size: 0.9rem;
+      }
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      th, td {
+        font-size: 0.8rem;
+        padding: 6px;
+      }
+      th:nth-child(4), td:nth-child(4) {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .delete-btn {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>Upload Subject Material</h2>
+
+  <label>Class:</label>
+  <select id="class">
+    <option value="class6">Class 6</option>
+    <option value="class7">Class 7</option>
+    <option value="class8">Class 8</option>
+    <option value="class9">Class 9</option>
+    <option value="class10">Class 10</option>
+  </select><br />
+
+  <label>Subject:</label>
+  <select id="subject">
+    <option value="math">Math</option>
+    <option value="science">Science</option>
+  </select><br />
+
+  <label>Title:</label>
+  <input type="text" id="title" placeholder="Enter title" /><br />
+
+  <label>Answer:</label>
+  <textarea id="answer" placeholder="Enter answer"></textarea><br />
+
+  <button onclick="uploadData()">Upload</button>
+
+  <h3>Preview:</h3>
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>Class</th>
+        <th>Subject</th>
+        <th>Title</th>
+        <th>Answer</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="dataBody"></tbody>
+  </table>
+
+  <!-- Firebase Code -->
+  <script type="module">
+    // Import Firebase SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+    import { getDatabase, ref as dbRef, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDe9_oaD_I4Pdu4FjpEmhz8FSe-Zrp6Ya4",
+      authDomain: "studentnotenstp.firebaseapp.com",
+      databaseURL: "https://studentnotenstp-default-rtdb.firebaseio.com",
+      projectId: "studentnotenstp",
+      storageBucket: "studentnotenstp.appspot.com",
+      messagingSenderId: "445170466970",
+      appId: "1:445170466970:web:735a9a39430ba493449f23",
+      measurementId: "G-TQ4Q3SGSDC"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Function to render table data
+    function renderTable() {
+      const dataBody = document.getElementById("dataBody");
+      dataBody.innerHTML = ''; // Clear existing rows
+
+      // Fetch data for all classes and subjects
+      const classes = ['class6', 'class7', 'class8', 'class9', 'class10'];
+      const subjects = ['math', 'science'];
+
+      classes.forEach(classVal => {
+        subjects.forEach(subjectVal => {
+          const dbPath = `${classVal}/${subjectVal}`;
+          const dataRef = dbRef(db, dbPath);
+          
+          onValue(dataRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              dataBody.innerHTML = ''; // Clear to avoid duplicates
+              Object.entries(data).forEach(([key, value]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                  <td>${classVal}</td>
+                  <td>${subjectVal}</td>
+                  <td>${value.title}</td>
+                  <td>${value.answer}</td>
+                  <td><button class="delete-btn" data-path="${dbPath}/${key}">Delete</button></td>
+                `;
+                dataBody.appendChild(row);
+              });
+
+              // Add event listeners to delete buttons
+              document.querySelectorAll('.delete-btn').forEach(button => {
+                button.removeEventListener('click', handleDelete); // Prevent multiple listeners
+                button.addEventListener('click', handleDelete);
+              });
+            }
+          }, {
+            onlyOnce: false // Keep listening for changes
+          });
+        });
+      });
+    }
+
+    // Delete handler function
+    async function handleDelete(event) {
+      const path = event.target.getAttribute('data-path');
+      try {
+        await remove(dbRef(db, path));
+        alert('Entry deleted successfully!');
+      } catch (error) {
+        console.error('Delete failed:', error);
+        alert(`Delete failed: ${error.message}`);
+      }
+    }
+
+    // Initial table render
+    renderTable();
+
+    window.uploadData = async function () {
+      const classValue = document.getElementById("class").value;
+      const subjectValue = document.getElementById("subject").value;
+      const title = document.getElementById("title").value.trim();
+      const answer = document.getElementById("answer").value.trim();
+
+      // Input validation
+      if (!title || !answer) {
+        alert("Please enter both a title and an answer.");
+        return;
+      }
+
+      try {
+        // Show loading state
+        const uploadButton = document.querySelector('button');
+        uploadButton.disabled = true;
+        uploadButton.textContent = 'Uploading...';
+
+        // Save metadata to Realtime Database
+        const dbPath = `${classValue}/${subjectValue}`;
+        const newRef = push(dbRef(db, dbPath));
+        await set(newRef, {
+          title: title,
+          answer: answer,
+          timestamp: new Date().toISOString()
+        });
+
+        // Reset form
+        document.getElementById("title").value = '';
+        document.getElementById("answer").value = '';
+        
+        alert("Upload successful!");
+      } catch (error) {
+        console.error("Upload failed:", error);
+        alert(`Upload failed: ${error.message}`);
+      } finally {
+        // Reset button state
+        const uploadButton = document.querySelector('button');
+        uploadButton.disabled = false;
+        uploadButton.textContent = 'Upload';
+      }
+    };
+  </script>
+</body>
+</html>

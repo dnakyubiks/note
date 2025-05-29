@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Class</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      text-align: center;
+      padding: 50px 20px;
+    }
+
+    h1 {
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .class-container {
+      display: flex;
+      flex-direction: column; /* Make it vertical */
+      align-items: center;    /* Center horizontally */
+      gap: 20px;
+    }
+
+    .class-card {
+      background-color: #ffffff;
+      padding: 20px 40px;
+      width: 200px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s, background-color 0.3s;
+      cursor: pointer;
+      text-decoration: none;
+      color: #333;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    .class-card:hover {
+      transform: translateY(-5px);
+      background-color: #e0ecff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Select Your Class</h1>
+  <div class="class-container">
+    <a href="six/class_six_subject.html" class="class-card">Class 6</a>
+    <a href="seven/class_seven_subject.html" class="class-card">Class 7</a>
+    <a href="eight/class_eight_subject.html" class="class-card">Class 8</a>
+    <a href="nine/class_nine_subject.html" class="class-card">Class 9</a>
+    <a href="ten/class_ten_subject.html" class="class-card">Class 10</a>
+  </div>
+</body>
+</html>
