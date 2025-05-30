@@ -51,6 +51,10 @@
     button:hover {
       background-color: #0056b3;
     }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -77,8 +81,25 @@
     .delete-btn:hover {
       background-color: #cc0000;
     }
-
-    /* Mobile Responsive Design */
+    .show-data-btn {
+      background-color: #28a745;
+      max-width: 150px;
+    }
+    .show-data-btn:hover {
+      background-color: #218838;
+    }
+    .preview-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .no-data, .loading {
+      text-align: center;
+      padding: 10px;
+      color: #555;
+    }
     @media (max-width: 600px) {
       body {
         padding: 10px;
@@ -93,6 +114,7 @@
       button {
         max-width: 100%;
         font-size: 0.9rem;
+        margin: 10px auto;
       }
       table {
         display: block;
@@ -112,6 +134,13 @@
       .delete-btn {
         font-size: 0.7rem;
         padding: 4px 8px;
+      }
+      .preview-controls {
+        flex-direction: column;
+        gap: 5px;
+      }
+      .show-data-btn {
+        max-width: 100%;
       }
     }
   </style>
@@ -140,9 +169,25 @@
   <label>Answer:</label>
   <textarea id="answer" placeholder="Enter answer"></textarea><br />
 
-  <button onclick="uploadData()">Upload</button>
+  <button id="uploadBtn" onclick="uploadData()" disabled>Upload</button>
 
   <h3>Preview:</h3>
+  <div class="preview-controls">
+    <label for="previewClass">Preview Class:</label>
+    <select id="previewClass" onchange="debouncedRenderTable()">
+      <option value="class6">Class 6</option>
+      <option value="class7" selected>Class 7</option>
+      <option value="class8">Class 8</option>
+      <option value="class9">Class 9</option>
+      <option value="class10">Class 10</option>
+    </select>
+    <label for="previewSubject">Preview Subject:</label>
+    <select id="previewSubject" onchange="debouncedRenderTable()">
+      <option value="math" selected>Math</option>
+      <option value="science">Science</option>
+    </select>
+    <button id="showDataBtn" class="show-data-btn" onclick="debouncedRenderTable()" disabled>Show Data</button>
+  </div>
   <table id="dataTable">
     <thead>
       <tr>
@@ -153,16 +198,13 @@
         <th>Action</th>
       </tr>
     </thead>
-    <tbody id="dataBody"></tbody>
+    <tbody id="dataBody"><tr><td colspan="5" class="loading">Loading...</td></tr></tbody>
   </table>
 
-  <!-- Firebase Code -->
   <script type="module">
-    // Import Firebase SDKs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
     import { getDatabase, ref as dbRef, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 
-    // Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyDe9_oaD_I4Pdu4FjpEmhz8FSe-Zrp6Ya4",
       authDomain: "studentnotenstp.firebaseapp.com",
@@ -175,58 +217,89 @@
     };
 
     // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    let app, db;
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
+      console.log("Firebase initialized successfully");
+      document.getElementById("uploadBtn").disabled = false;
+      document.getElementById("showDataBtn").disabled = false; // Enable Show Data button
+    } catch (error) {
+      console.error("Firebase initialization failed:", error);
+      alert("Failed to connect to Firebase. Please check your configuration.");
+      document.getElementById("dataBody").innerHTML = '<tr><td colspan="5" class="no-data">Failed to load data. Please try again later.</td></tr>';
+    }
 
-    // Function to render table data
+    // Debounce function
+    function debounce(func, wait) {
+      let timeout;
+      return function (...args) {
+        console.log("Debounce triggered for:", func.name);
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          func.apply(this, args);
+          console.log("Debounce executed for:", func.name);
+        }, wait);
+      };
+    }
+
     function renderTable() {
+      if (!db) {
+        console.error("Database not initialized, cannot render table");
+        return;
+      }
+      console.log("renderTable called");
       const dataBody = document.getElementById("dataBody");
-      dataBody.innerHTML = ''; // Clear existing rows
+      dataBody.innerHTML = '<tr><td colspan="5" class="loading">Loading...</td></tr>';
 
-      // Fetch data for all classes and subjects
-      const classes = ['class6', 'class7', 'class8', 'class9', 'class10'];
-      const subjects = ['math', 'science'];
+      const classVal = document.getElementById("previewClass").value.toLowerCase();
+      const subjectVal = document.getElementById("previewSubject").value.toLowerCase();
+      const dbPath = `${classVal}/${subjectVal}`;
+      const dataRef = dbRef(db, dbPath);
 
-      classes.forEach(classVal => {
-        subjects.forEach(subjectVal => {
-          const dbPath = `${classVal}/${subjectVal}`;
-          const dataRef = dbRef(db, dbPath);
-          
-          onValue(dataRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-              dataBody.innerHTML = ''; // Clear to avoid duplicates
-              Object.entries(data).forEach(([key, value]) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                  <td>${classVal}</td>
-                  <td>${subjectVal}</td>
-                  <td>${value.title}</td>
-                  <td>${value.answer}</td>
-                  <td><button class="delete-btn" data-path="${dbPath}/${key}">Delete</button></td>
-                `;
-                dataBody.appendChild(row);
-              });
+      console.log(`Fetching data from: ${dbPath}`);
 
-              // Add event listeners to delete buttons
-              document.querySelectorAll('.delete-btn').forEach(button => {
-                button.removeEventListener('click', handleDelete); // Prevent multiple listeners
-                button.addEventListener('click', handleDelete);
-              });
-            }
-          }, {
-            onlyOnce: false // Keep listening for changes
+      onValue(dataRef, (snapshot) => {
+        dataBody.innerHTML = '';
+        const data = snapshot.val();
+        if (data) {
+          console.log("Data retrieved:", data);
+          Object.entries(data).forEach(([key, value]) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${classVal}</td>
+              <td>${subjectVal}</td>
+              <td>${value.title}</td>
+              <td>${value.answer}</td>
+              <td><button class="delete-btn" data-path="${dbPath}/${key}">Delete</button></td>
+            `;
+            dataBody.appendChild(row);
           });
+        } else {
+          console.log(`No data found at ${dbPath}`);
+          dataBody.innerHTML = '<tr><td colspan="5" class="no-data">No data available for this class and subject.</td></tr>';
+        }
+
+        document.querySelectorAll('.delete-btn').forEach(button => {
+          button.removeEventListener('click', handleDelete);
+          button.addEventListener('click', handleDelete);
         });
+      }, (error) => {
+        console.error("Error fetching data:", error);
+        dataBody.innerHTML = '<tr><td colspan="5" class="no-data">Error fetching data: ${error.message}. Please check your connection or database settings.</td></tr>';
       });
     }
 
-    // Delete handler function
+    // Make debouncedRenderTable globally accessible
+    window.debouncedRenderTable = debounce(renderTable, 300);
+
     async function handleDelete(event) {
       const path = event.target.getAttribute('data-path');
+      console.log(`Attempting to delete: ${path}`);
       try {
         await remove(dbRef(db, path));
         alert('Entry deleted successfully!');
+        window.debouncedRenderTable();
       } catch (error) {
         console.error('Delete failed:', error);
         alert(`Delete failed: ${error.message}`);
@@ -234,27 +307,29 @@
     }
 
     // Initial table render
-    renderTable();
+    if (db) window.debancedRenderTable();
 
     window.uploadData = async function () {
-      const classValue = document.getElementById("class").value;
-      const subjectValue = document.getElementById("subject").value;
+      if (!db) {
+        alert("Database not initialized. Please try again later.");
+        return;
+      }
+
+      const classValue = document.getElementById("class").value.toLowerCase();
+      const subjectValue = document.getElementById("subject").value.toLowerCase();
       const title = document.getElementById("title").value.trim();
       const answer = document.getElementById("answer").value.trim();
 
-      // Input validation
-      if (!title || !answer) {
-        alert("Please enter both a title and an answer.");
+      if (!title || !answer || title.match(/^\s*$/) || answer.match(/^\s*$/)) {
+        alert("Please enter a valid title and answer (non-empty and not just whitespace).");
         return;
       }
 
       try {
-        // Show loading state
-        const uploadButton = document.querySelector('button');
+        const uploadButton = document.getElementById("uploadBtn");
         uploadButton.disabled = true;
         uploadButton.textContent = 'Uploading...';
 
-        // Save metadata to Realtime Database
         const dbPath = `${classValue}/${subjectValue}`;
         const newRef = push(dbRef(db, dbPath));
         await set(newRef, {
@@ -263,17 +338,21 @@
           timestamp: new Date().toISOString()
         });
 
-        // Reset form
+        console.log(`Uploaded data to: ${dbPath}`);
         document.getElementById("title").value = '';
         document.getElementById("answer").value = '';
         
         alert("Upload successful!");
+        const previewClass = document.getElementById("previewClass").value.toLowerCase();
+        const previewSubject = document.getElementById("previewSubject").value.toLowerCase();
+        if (classValue === previewClass && subjectValue === previewSubject) {
+          window.debouncedRenderTable();
+        }
       } catch (error) {
         console.error("Upload failed:", error);
         alert(`Upload failed: ${error.message}`);
       } finally {
-        // Reset button state
-        const uploadButton = document.querySelector('button');
+        const uploadButton = document.getElementById("uploadBtn");
         uploadButton.disabled = false;
         uploadButton.textContent = 'Upload';
       }
